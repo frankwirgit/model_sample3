@@ -1,0 +1,468 @@
+       ###############################################################################
+       # Load all global data and parameters
+       ###############################################################################
+    1: import pandas as pd
+    1: import numpy as np
+    1: import sys
+    1: import csv
+    1: import math
+    1: from scipy.stats import norm
+    1: import random
+       
+    1: cohort_summary = pd.read_csv("LOS_cohort_summary_sunhwan.csv")
+       
+       # replace NA to 0 for age and bmi columns
+    1: required_features = ['gender', 'age_60', 'age_60_70', 'age_70_80', 'age_80', 
+    1:                      'bmi_30', 'bmi_30_35', 'bmi_35_40', 'bmi_40']
+       
+    1: cohort_summary = cohort_summary.fillna(value=0)
+       
+    1: cohort_summary.head()
+       
+    1: features = ["antibiotics", "ever_smoker", "pre_comor_Group3_Endocrine","pre_comor_Anemia", 
+    1:                 "pre_comor_Group5_MentalDisorder", "pre_comor_Group6_Nervous", "pre_comor_Hypertension",
+    1:                 "pre_comor_Group8_Respiratory", "pre_comor_Rheumatism"]
+       
+    1: features_inorder = ["antibiotics", "pre_comor_Anemia", "pre_comor_Group6_Nervous", 
+    1:                  "pre_comor_Group5_MentalDisorder", "pre_comor_Rheumatism", "pre_comor_Group3_Endocrine", 
+    1:                  "pre_comor_Group8_Respiratory", "ever_smoker", "pre_comor_Hypertension"]
+       
+    1: feature_set = required_features + features
+       
+    1: num_features = len(features)
+       
+       # centroid of 8 clusters
+    1: cluster_centroid = pd.read_csv("new_preop_kmeans_13_centers_8_binary_48K.csv")
+    1: cluster_features = list(cluster_centroid.columns)
+         
+       # cluster size
+    1: cluster_size = pd.read_csv("new_preop_kmeans_13_size_8_binary_48K.csv")
+       
+       # Average of features from the entirepopulation
+    1: pop_avg = ((cohort_summary[features].mul(cohort_summary['num_patient'], axis=0)).sum(axis=0))/sum(cohort_summary['num_patient'])
+       
+       # alpha level for 99% confidence interval
+    1: alpha = 0.01
+    1: z = norm.ppf(1-0.5*alpha)
+       
+       # z value for confidence interval
+    1: cr = norm.ppf(0.975)
+       
+       #import the coefficients, covariance matrix and quantile profiles
+    1: coe_los = pd.read_csv("formula_glm_LOS.csv")
+    1: coe_los = coe_los.coefficients.as_matrix()
+       
+       #coe_rev = pd.read_csv("formula_glm_revision.csv")
+       #coe_rev = coe_rev.coefficients.as_matrix()
+       
+       #coe_com = pd.read_csv("formula_glm_complication.csv")
+       #coe_com = coe_com.coefficients.as_matrix()
+       
+       #coe_porec = pd.read_csv("formula_glm_post_recovery.csv")
+       #coe_porec = coe_porec.coefficients.as_matrix()
+       
+    1: cov_los = pd.read_csv("covariance_glm_LOS.csv")
+    1: del cov_los['predictor']
+    1: cov_los = np.mat(cov_los)
+       
+       #cov_rev = pd.read_csv("covariance_glm_revision.csv")
+       #del cov_rev['predictor']
+       #cov_rev = np.mat(cov_rev)
+       
+       #cov_com = pd.read_csv("covariance_glm_complication.csv")
+       #del cov_com['predictor']
+       #cov_com = np.mat(cov_com)
+       
+       #cov_porec = pd.read_csv("covariance_glm_post_recovery.csv")
+       #del cov_porec['predictor']
+       #cov_porec = np.mat(cov_porec)
+       
+    1: qr_los = pd.read_csv("quantile_fitted_LOS.csv")
+       #qr_rev = pd.read_csv("quantile_fitted_revision.csv")
+       #qr_com = pd.read_csv("quantile_fitted_complication.csv")
+       #qr_porec = pd.read_csv("quantile_fitted_post_recovery.csv")
+       
+       ###############################################################################
+       # User defined function for inference of missing information
+       ###############################################################################
+    1: def findCondPop(patient):
+         # Find the conditional population based on known features ofthe patient
+         # Args:
+         #   patient: Patient data. NA is for unknown feature value.
+         # Returns:
+         #   Row index of summary table corresponding to conditional population
+    2:   idx = range(cohort_summary.shape[0])
+         
+   38:   for i in range(len(feature_set)):
+   36:     f = feature_set[i]
+   36:     if patient[i] is not None:
+   19:       idx_f = cohort_summary[cohort_summary[f]==patient[i]].index.tolist()
+33081:       idx = [j for j in idx if j in idx_f]
+         
+    2:   return idx
+       
+    1: def initEstimate(pop_idx, patient):
+         # Initialize the estimate from the conditional population mean
+         # Args:
+         #   pop_idx: Row index of cohort_summary table
+         #   patient: Patient data. NA is for unknown feature value.
+         # Returns:
+         #   Range and estimates of features for clustering.
+         
+    2:   if len(pop_idx) != 0:
+    2:     sub_cohort = cohort_summary.iloc[pop_idx]
+    2:     num_pop = sum(sub_cohort['num_patient'])
+    2:     cond_est = ((sub_cohort[features].mul(sub_cohort['num_patient'], axis=0)).sum(axis=0))/float(num_pop)
+         
+   20:     bound = [z*math.sqrt(x) for x in cond_est*(1-cond_est)/num_pop]
+         else:
+           cond_est = pop_avg
+           bound = [z*math.sqrt(x) for x in cond_est*(1-cond_est)/sum(cohort_summary['num_patient'])]
+           
+   20:   for i in range(len(features)):
+   18:       if patient[i+len(required_features)] is not None:
+    1:           cond_est[i] = patient[i+len(required_features)]
+    1:           bound[i] = 0
+   38:   bmi_idx = [i for i,v in enumerate(feature_set) if 'bmi' in v]
+   38:   f_hat = [v for i,v in enumerate(patient) if i in bmi_idx] + list(cond_est)
+    2:   f_range = [0.0]*len(bmi_idx) + bound
+           
+    2:   return f_hat, f_range
+       
+       
+       #cluster = cluster_centroid
+    1: def findSupportClusters(cluster, f_hat, f_range, patient):
+         # Compute the support clusters
+         # Args:
+         #   c: data frame for the centroid of clusters. Each row of the data frame
+         #      contains the coordinate of the centorid of each cluster. The number
+         #      of the row is the number of clusters and the number of columns is the
+         #      number of dimensions
+         #   patient_data: Feature vector of patient information used in clustering.
+         #   range: 99% confidence interval of estimation of feature vector of the 
+         #          patient. If 0, then corresponding feature is known.
+         # Returns:
+         #   Index of support clusters.
+       
+         # Divide known and unknown dimensions or attributes
+   38:   idx_known =   [i - (len(feature_set) - len(cluster_features)) for i,v in enumerate(patient) if v is not None and i >= len(feature_set) - len(cluster_features)]
+   38:   idx_unknown = [i - (len(feature_set) - len(cluster_features)) for i,v in enumerate(patient) if v is None and i >= len(feature_set) - len(cluster_features)]
+       
+   28:   known = [v for i,v in enumerate(f_hat) if i in idx_known]
+   28:   unknown = [v for i,v in enumerate(f_hat) if i in idx_unknown]
+   28:   unknown_bound = [v for i,v in enumerate(f_range) if i in idx_unknown]
+         
+         #compute the distance with known features
+   11:   known_dim = cluster[[cluster_features[i] for i in idx_known]]
+    2:   cluster['known_dist'] = ((known_dim - known)**2).sum(axis=1)
+         
+    2:   support_cluster = set()
+         
+   19:   for i in range(len(idx_unknown)):
+   17:     min_f_hat = unknown[i] - unknown_bound[i]
+   17:     sc_min = ((cluster[cluster_features[idx_unknown[i]]] - min_f_hat)**2 + cluster['known_dist']).idxmin()
+   17:     support_cluster.add(sc_min)
+   17:     max_f_hat = unknown[i] + unknown_bound[i]
+   17:     sc_max = ((cluster[cluster_features[idx_unknown[i]]] - max_f_hat)**2 + cluster['known_dist']).idxmin()
+   17:     support_cluster.add(sc_max)
+       
+    2:   return list(support_cluster)
+       
+       # cluster = cluster_centroid
+    1: def findSupportBox(cluster, support_cluster, f_hat, f_range):
+         # Compute the support box
+         # Args:
+         #   cluster: data frame for the centroid of clusters. Each row of the data frame
+         #            contains the coordinate of the centorid of each cluster. The number
+         #            of the row is the number of clusters and the number of columns is the
+         #             number of dimensions
+         #   support_cluster: Index of support clusters
+         #   f_hat: Feature vector of patient information used in clustering.
+         #   f_range: 99% confidence interval of estimation of feature vector of the 
+         #            patient. If 0, then corresponding feature is known.
+         # Returns:
+         #   Coordinate of support boxes for features used for clustering.
+       
+         # select support clusters
+    2:   sc = cluster.iloc[support_cluster]
+   28:   max_est = [a+b for a,b in zip(f_hat, f_range)]
+   28:   min_est = [a-b for a,b in zip(f_hat, f_range)]
+         
+    2:   box_min = []
+    2:   box_max = []
+       
+   28:   for f in cluster_features:  
+   26:     box_min.append(min(min(list(sc[f])), min_est[cluster_features.index(f)]))
+   26:     box_max.append(max(max(list(sc[f])), max_est[cluster_features.index(f)]))
+         
+    2:   return box_min, box_max
+       
+    1: def findGroupCluster(cluster, box_min, box_max):
+         # Find clusters inside the support box
+         # Args:
+         #   cluster: data frame for the centroid of clusters. Each row of the data frame
+         #            contains the coordinate of the centorid of each cluster. The number
+         #            of the row is the number of clusters and the number of columns is the
+         #            number of dimensions
+         #   box: Coordinate of support box. box$box_min has the minimum coordinate and 
+         #        box$box_max has the maximum coordinate.
+         # Returns:
+         #   Index of clusters inside the support box.  
+       
+    2:   group_cluster = []
+   18:   for c in range(cluster.shape[0]):
+   16:     if ((cluster.iloc[c][cluster_features] >= box_min).product() and 
+    3:         (cluster.iloc[c][cluster_features] <= box_max).product()):
+    3:       group_cluster.append(c)
+         
+    2:   return group_cluster
+       
+    1: def updateEstimates(cluster, cluster_size, group_cluster, f_hat, f_range):
+         # Update the estimates of features for clustering from group clusters.
+         # Args:
+         #   cluster: data frame for the centroid of clusters. Each row of the data frame
+         #            contains the coordinate of the centorid of each cluster. The number
+         #            of the row is the number of clusters and the number of columns is the
+         #             number of dimensions
+         #   cluster_size: number of population in cluster.
+         #   group_cluster: Index of group clusters.
+         #   f_hat: Feature vector of patient information used in clustering.
+         #   f_range: 99% confidence interval of estimation of feature vector of the 
+         #            patient. If 0, then corresponding feature is known.
+         # Returns:
+         #   Range and estimates of features (probability and binary value) for clustering.
+       
+         
+    9:   num = sum(cluster_size.iloc[group_cluster].values)[0]
+    9:   pos_num = pd.DataFrame(cluster.iloc[group_cluster][cluster_features].values*cluster_size.iloc[group_cluster].values, columns=cluster_features).sum(axis=0)
+       
+    9:   f_hat_new = pos_num / num  
+  126:   f_range_new = [z*math.sqrt(x) for x in f_hat_new*(1-f_hat_new)/num]
+    9:   f_hat_bin_new = f_hat[:]
+         
+  126:   for i in range(len(f_range)):
+  117:     if f_range[i] == 0:
+   41:       f_range_new[i] = f_range[i]
+   41:       f_hat_new[cluster_features[i]] = f_hat[i]
+           else:
+   76:       f_hat_bin_new[i] = int(f_hat_new[cluster_features[i]] >= pop_avg[cluster_features[i]])
+         
+    9:   return f_hat_new, f_range_new, f_hat_bin_new
+       
+       
+       
+    1: def logitT(x):
+         #function to perform the log transform
+         #x is the input value before applying the link function which is the log transform
+         #return the output value after applying the link function
+    9:   return ( math.exp(x)/(1+math.exp(x)) )
+       
+       
+    1: def covf(x, cov):
+         #function to calculate the standard error
+         #x is the input vector, cov is the covariance matrix, x.T is to conduct the transpose for x
+         #return the output value as standard error
+    3:   return (math.sqrt(x*cov*x.T))
+       
+       
+    1: def computePredCI2(patient_input, imputed, coe, cov):
+         #function to compute the confidence interval
+         #patient_input is users answers or designed test data
+         #imputed is the imputed list after the process of imputing missings
+         #return a dataframe having measures to present to users
+       
+         #assemble the users input
+    3:   udemo = patient_input[["age", "bmi_pre", "gender"]].copy()
+    3:   udemo.loc[:,'gender'] = udemo.loc[:,'gender']-1
+         #udemo.gender = udemo.iloc[0]['gender']-1
+    3:   to_compute = imputed[features]
+       
+         #append the intercept to model input
+    3:   inpt = pd.DataFrame({'intercept': [1]})
+    3:   to_compute = pd.concat([inpt, udemo, to_compute], axis=1)
+    3:   to_compute = to_compute.as_matrix()
+         
+         #compute the model formula
+    3:   s = np.dot(coe, to_compute.transpose())
+       
+         #compute the standard error
+    3:   to_compute = np.mat(to_compute)
+    6:   se = [covf(to_compute, cov) for x in to_compute]
+       
+         #apply logit transform for prediction, lower and upper bounds
+    3:   ls = logitT(s[0])
+    3:   lsupr = logitT(s[0]+cr*se[0])
+    3:   lslwr = logitT(s[0]-cr*se[0])
+       
+         #compute the range and its percentage
+    3:   rgp = None
+    3:   if(ls!=0):
+    3:     rgp = (lsupr-lslwr)/ls*100
+       
+         #assemble the results to a data frame
+    3:   td = pd.DataFrame({'pid':[patient_input.iloc[0]['pid']], 'pred_val':[ls], 'pred_upr':[lsupr],
+    3:                   'pred_lwr':[lslwr], 'pred_range':[lsupr-lslwr], 'range_pct': rgp})
+       
+    3:   return (td)
+       
+       
+    1: def ask_required_features(patient_input):    
+         #ask demographics info
+    1:   patient_input[required_features]=0
+         
+         #patient_input.age = eval(raw_input("Please enter your age: "))
+    1:   patient_input.age = input("Please enter your age(18-120): ")
+    1:   p_age= patient_input.iloc[0]['age']
+         
+    1:   if p_age < 60:
+    1:       patient_input['age_60']=1
+         elif p_age >= 60 and p_age < 70:
+             patient_input['age_60_70']=1
+         elif p_age >= 70 and p_age < 80:
+             patient_input['age_70_80']=1
+         else:
+             patient_input['age_80']=1
+       
+             
+    1:   p_weight = input("Please enter your weight(LB): ")
+    1:   p_height = input("Please enter your height(inch): ")
+         
+    1:   p_bmi = p_weight*730/math.pow(p_height,2)
+    1:   patient_input.bmi_pre = p_bmi
+         
+    1:   if p_bmi < 30:
+    1:       patient_input['bmi_30']=1
+         elif p_age >= 30 and p_age < 35:
+             patient_input['bmi_30_35']=1
+         elif p_age >= 35 and p_age < 40:
+             patient_input['bmi_35_40']=1
+         else:
+             patient_input['bmi_40']=1
+             
+    1:   p_gender = raw_input("Please enter your gender(M/F): ")
+    1:   if p_gender=='M':
+    1:       patient_input['gender']=1
+         else:
+             patient_input['gender']=2
+       
+    1:   return (patient_input)
+         
+       
+    1: def feedback_results(patient_output):
+           #print "the prediction is " + str(round(patient_output.pred_val.values[0]*100,2)) + "%"
+    3:     pt = patient_output.iloc[0]
+    3:     print "Based on your inputs, your risk to have a longer hospital stay is " + str(round(pt['pred_val'],3)*100) + "%"
+           print "And your risk to have a longer hosptial stay is between " + str(round(pt['pred_lwr'],3)*100) + "% and " + \
+    3:     str(round(pt['pred_upr'],3)*100) + "%"
+           
+           #qr_los[(qr_los['quantile']>=pt['pred_val'])][:1].iloc[0]['percent']
+    3:     p_qr = qr_los[(qr_los['quantile']>=0.042)].index.tolist()[0]*5
+    3:     print "You are in the " + str(p_qr-5) + "% - " + str(p_qr) + "% risk group of the studied population who had TKR"
+    3:     print str(100-p_qr) + "% of the studied population who had TKR have a higher risk than you do for having a longer hospital stay"
+    3:     p_risk = "low"
+    3:     if p_qr >25 and p_qr <= 75:
+               p_risk = "medium"
+    3:     elif p_qr > 75:
+               p_risk = "high"
+    3:     print "You are at " + p_risk + " risk to have a logner hospital stay"
+           
+       
+       
+       
+             
+       
+    1: def main():
+       
+         #import the patient input structure
+    1:   patient_input = pd.read_csv("patient_model.csv")
+         #assign outcome features to NaN
+    1:   patient_input[['Length_of_Stay','LOS','revision','complication','post_recovery']]=np.nan
+         #randomly assign the pid
+    1:   patient_input.pid = random.randint(1, 2000) 
+       
+       
+         #test option 1: import the designed test data
+         #demo_input = pd.read_csv("all_case_demographic.csv")
+         #feature_input = pd.read_csv("all_case_preop_feature.csv")
+         #del feature_input['active_feature'] 
+       
+         #pick up cases
+         #k=1
+         #assemble the test data
+         #patient_input[list(demo_input.columns.values)]=demo_input.iloc[k].tolist()
+       
+         #for kj in range(len(feature_input.index)):
+         #kj=1
+         #patient_input[list(feature_input.columns.values)]=feature_input.iloc[kj].tolist()
+         
+         #teset option 2: use input from commandline as test data
+    1:   ask_required_features(patient_input)
+             
+         #patient_input[required_features]
+       
+         #initial the question pool
+    1:   feature_toask = features_inorder[:]
+       
+         #iterate the questions in the pool for questioning
+         #for i in range(len(features_inorder)):
+    3:   for i in range(2):
+           
+           #assign unknown features to impute
+    2:     pat = patient_input.copy()
+       
+   19:     for name in feature_toask:
+   17:       pat[name]=None
+       
+           #assign the value to impute
+           #patient=pat[feature_set].iloc[0]
+    2:     patient=pat[feature_set].iloc[0].tolist()
+           
+           #start to impute
+    2:     cond_pop = findCondPop(patient)
+    2:     f_hat, f_range = initEstimate(cond_pop, patient)
+    2:     support_cluster = findSupportClusters(cluster_centroid, f_hat, f_range, patient)
+    2:     box_min, box_max = findSupportBox(cluster_centroid, support_cluster, f_hat, f_range)
+    2:     group_cluster = findGroupCluster(cluster_centroid, box_min, box_max)
+       
+    2:     if len(group_cluster) == 0:
+             feature_est = f_hat
+             feature_range = f_range
+             feature_est_bin = f_hat
+       
+   28:     for i in range(len(f_range)):
+   26:       if f_range[i] != 0:
+   17:         feature_est_bin[i] = int(f_hat[i] >= pop_avg[cluster_features[i]])
+             else:
+               feature_est, feature_range, feature_est_bin = \
+    9:                      updateEstimates(cluster_centroid, cluster_size, group_cluster, f_hat, f_range)
+       
+           #start to compute the model
+           #print (feature_est)
+    2:     impute_output = pd.DataFrame(feature_est[features]).transpose()
+    2:     patient_output = computePredCI2(patient_input, impute_output, coe_los, cov_los)
+       
+           #print the results
+    2:     feedback_results(patient_output)
+           
+           #ask the questions
+    2:     p_answer=raw_input("We'd like to ask you - do you have " + feature_toask[0] + "(Y/N)?")
+    2:     if p_answer=='Y':
+    1:         patient_input[feature_toask[0]]=1
+           else:
+    1:         patient_input[feature_toask[0]]=0
+       
+    2:     del feature_toask[0]
+           
+         #compute the model with a complete user input
+    1:   patient_output = computePredCI2(patient_input, patient_input, coe_los, cov_los)
+         
+         #print the results
+    1:   feedback_results(patient_output)
+    1:   print "End of the test"
+       
+    1: if __name__ == '__main__':
+    1:   main()
+       
+       #import profile
+       #profile.run('main()')
+       
