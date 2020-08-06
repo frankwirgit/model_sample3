@@ -1,0 +1,14 @@
+"predictor","coefficients"
+"intercept",-2.56364299408977
+"age",-0.00762679989271254
+"bmi_pre",0.000561506991660166
+"gender",-0.217809774657377
+"antibiotics",-0.194085462628169
+"ever_smoker",0.223373846227181
+"pre_comor_Group3_Endocrine",0.147422316149974
+"pre_comor_Anemia",0.405035667537763
+"pre_comor_Group5_MentalDisorder",0.26167960503549
+"pre_comor_Group6_Nervous",0.297811943593738
+"pre_comor_Hypertension",0.0649160414912748
+"pre_comor_Group8_Respiratory",0.105050097482249
+"pre_comor_Rheumatism",0.31241341768058

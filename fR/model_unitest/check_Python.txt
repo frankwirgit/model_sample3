@@ -1,0 +1,168 @@
+Please enter your age(18-120): 52
+
+Please enter your gender(M/F): M
+
+Please enter your weight(LB): 150
+
+Please enter your height(inch): 67
+C:\Users\IBM_ADMIN\Anaconda\lib\site-packages\pandas\core\indexing.py:415: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+  self.obj[item] = s
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        0.787330
+ever_smoker                        0.102247
+pre_comor_Group3_Endocrine         0.367389
+pre_comor_Anemia                   0.061364
+pre_comor_Group5_MentalDisorder    0.046360
+pre_comor_Group6_Nervous           0.076129
+pre_comor_Hypertension             0.057315
+pre_comor_Group8_Respiratory       0.106771
+pre_comor_Rheumatism               0.073113
+dtype: float64
+the value is 3.39%
+
+We'd like to ask you - do you have antibiotics(Y/N)?Y
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        1.000000
+ever_smoker                        0.068515
+pre_comor_Group3_Endocrine         0.000000
+pre_comor_Anemia                   0.022086
+pre_comor_Group5_MentalDisorder    0.018321
+pre_comor_Group6_Nervous           0.044799
+pre_comor_Hypertension             0.090601
+pre_comor_Group8_Respiratory       0.056092
+pre_comor_Rheumatism               0.074790
+dtype: float64
+the value is 3.11%
+
+We'd like to ask you - do you have pre_comor_Anemia(Y/N)?Y
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        1.000000
+ever_smoker                        0.117390
+pre_comor_Group3_Endocrine         0.314469
+pre_comor_Anemia                   1.000000
+pre_comor_Group5_MentalDisorder    0.051830
+pre_comor_Group6_Nervous           0.074847
+pre_comor_Hypertension             0.424796
+pre_comor_Group8_Respiratory       0.123105
+pre_comor_Rheumatism               0.118978
+dtype: float64
+the value is 5.37%
+
+We'd like to ask you - do you have pre_comor_Group6_Nervous(Y/N)?N
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        1.000000
+ever_smoker                        0.117390
+pre_comor_Group3_Endocrine         0.314469
+pre_comor_Anemia                   1.000000
+pre_comor_Group5_MentalDisorder    0.051830
+pre_comor_Group6_Nervous           0.000000
+pre_comor_Hypertension             0.424796
+pre_comor_Group8_Respiratory       0.123105
+pre_comor_Rheumatism               0.118978
+dtype: float64
+the value is 5.28%
+
+We'd like to ask you - do you have pre_comor_Group5_MentalDisorder(Y/N)?Y
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        1.000000
+ever_smoker                        0.332212
+pre_comor_Group3_Endocrine         0.451357
+pre_comor_Anemia                   1.000000
+pre_comor_Group5_MentalDisorder    1.000000
+pre_comor_Group6_Nervous           0.000000
+pre_comor_Hypertension             0.515374
+pre_comor_Group8_Respiratory       0.273721
+pre_comor_Rheumatism               0.223457
+dtype: float64
+the value is 6.65%
+
+We'd like to ask you - do you have pre_comor_Rheumatism(Y/N)?N
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        1.000000
+ever_smoker                        0.117390
+pre_comor_Group3_Endocrine         0.000000
+pre_comor_Anemia                   1.000000
+pre_comor_Group5_MentalDisorder    1.000000
+pre_comor_Group6_Nervous           0.000000
+pre_comor_Hypertension             0.424796
+pre_comor_Group8_Respiratory       0.123105
+pre_comor_Rheumatism               0.000000
+dtype: float64
+the value is 6.64%
+
+We'd like to ask you - do you have pre_comor_Group3_Endocrine(Y/N)?Y
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        0.844488
+ever_smoker                        0.128926
+pre_comor_Group3_Endocrine         0.498636
+pre_comor_Anemia                   0.092413
+pre_comor_Group5_MentalDisorder    0.063331
+pre_comor_Group6_Nervous           0.089685
+pre_comor_Hypertension             0.310675
+pre_comor_Group8_Respiratory       0.142161
+pre_comor_Rheumatism               0.105880
+dtype: float64
+the value is 3.33%
+
+We'd like to ask you - do you have pre_comor_Group8_Respiratory(Y/N)?N
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        0.844488
+ever_smoker                        0.128926
+pre_comor_Group3_Endocrine         0.498636
+pre_comor_Anemia                   0.092413
+pre_comor_Group5_MentalDisorder    0.063331
+pre_comor_Group6_Nervous           0.089685
+pre_comor_Hypertension             0.310675
+pre_comor_Group8_Respiratory       0.142161
+pre_comor_Rheumatism               0.105880
+dtype: float64
+the value is 3.33%
+
+We'd like to ask you - do you have ever_smoker(Y/N)?Y
+bmi_30                             1.000000
+bmi_30_35                          0.000000
+bmi_35_40                          0.000000
+bmi_40                             0.000000
+antibiotics                        0.844488
+ever_smoker                        0.128926
+pre_comor_Group3_Endocrine         0.498636
+pre_comor_Anemia                   0.092413
+pre_comor_Group5_MentalDisorder    0.063331
+pre_comor_Group6_Nervous           0.089685
+pre_comor_Hypertension             0.310675
+pre_comor_Group8_Respiratory       0.142161
+pre_comor_Rheumatism               0.105880
+dtype: float64
+the value is 3.33%
+
+We'd like to ask you - do you have pre_comor_Hypertension(Y/N)?N
+the value is 6.63%
+end of the test
